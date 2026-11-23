@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>흑과 백</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  :root { --ink:#2b1d52; --yellow:#ffd23f; --pink:#ff5fa2; --muted:#6b5c95; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:linear-gradient(180deg, #5b6b8c 0%, #34405c 55%, #1f2740 100%); font-family:'Jua', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color:#fff; touch-action:manipulation; }
+  #stage { width:100%; height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px; }
+  #col { width:min(100%, 460px); display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #hud { display:flex; align-items:center; gap:6px; width:100%; font-variant-numeric:tabular-nums; }
+  #hud .item { display:flex; align-items:center; gap:5px; white-space:nowrap; background:#fff; color:var(--ink); border:3px solid var(--ink); border-radius:999px; box-shadow:0 4px 0 var(--ink); padding:2px 12px; height:38px; }
+  #hud .item.score { background:var(--yellow); flex:1; min-width:0; }
+  #hud .label { font-size:11px; color:var(--muted); } #hud .value { font-size:19px; }
+  #hud .icons { margin-left:auto; }
+  #hud button { background:#fff; border:3px solid var(--ink); color:var(--ink); width:36px; height:36px; border-radius:12px; font-size:15px; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  #wrap { position:relative; width:100%; background:#2c3652; border:4px solid var(--ink); border-radius:20px; box-shadow:0 5px 0 var(--ink); padding:10px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .row { display:flex; gap:4px; justify-content:center; width:100%; }
+  .tile { width:clamp(30px, 9.4vw, 40px); height:clamp(42px, 13vw, 56px); border:3px solid var(--ink); border-radius:9px; display:grid; place-items:center; font-size:clamp(18px, 6vw, 26px); box-shadow:0 3px 0 var(--ink); position:relative; transition:transform .12s; }
+  .tile.black { background:#26262c; color:#fff; } .tile.white { background:#fbfbfb; color:#26262c; }
+  .tile.used { opacity:.28; box-shadow:none; }
+  .tile.hand { cursor:pointer; } .tile.hand.sel { transform:translateY(-12px); outline:3px solid var(--pink); }
+  .tile.hand.dis { cursor:default; filter:grayscale(.4); opacity:.55; }
+  .tile.back::after { content:''; position:absolute; inset:5px; border:2px dashed rgba(128,128,128,.6); border-radius:5px; }
+  .tile.big { width:clamp(54px, 17vw, 76px); height:clamp(76px, 24vw, 106px); font-size:clamp(30px, 10vw, 44px); border-radius:12px; }
+  .tile.slot { background:rgba(255,255,255,.08); border-style:dashed; box-shadow:none; color:transparent; }
+  .tile.win { outline:4px solid #4cd964; } .tile.lose { opacity:.55; }
+  .lbl { font-size:12px; color:#b9c3dd; width:100%; text-align:center; }
+  #table { display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; padding:6px 0; background:rgba(0,0,0,.18); border-radius:14px; }
+  #tableRow { display:flex; gap:26px; align-items:center; } #vs { font-size:18px; color:#b9c3dd; }
+  #msg { min-height:24px; font-size:16px; text-align:center; text-shadow:0 2px 0 rgba(0,0,0,.4); }
+  #result { min-height:20px; font-size:14px; color:#ffe27a; text-align:center; }
+  #tools { display:flex; gap:8px; justify-content:center; }
+  #tools button { font:inherit; font-size:18px; color:var(--ink); background:var(--yellow); border:3px solid var(--ink); border-radius:999px; box-shadow:0 4px 0 var(--ink); padding:7px 28px; cursor:pointer; }
+  #tools button:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 var(--ink); } #tools button:disabled { opacity:.45; cursor:default; }
+  #strip { display:flex; gap:3px; justify-content:center; } #strip i { width:22px; height:8px; border-radius:4px; background:rgba(255,255,255,.2); } #strip i.w { background:#4cd964; } #strip i.l { background:#ff5a5a; } #strip i.d { background:#ffd23f; }
+  #overlay { position:absolute; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:12px; text-align:center; padding:16px; background:rgba(25,31,52,.92); border-radius:18px; overflow-y:auto; touch-action:pan-y; }
+  #overlay.hidden { display:none; }
+  #overlay h1, #overlay h2 { color:#fff; font-weight:400; paint-order:stroke fill; -webkit-text-stroke:6px var(--ink); text-shadow:0 5px 0 var(--ink); }
+  #overlay h1 { font-size:clamp(38px, 11vw, 50px); line-height:1.05; color:var(--yellow); } #overlay h2 { font-size:30px; }
+  #overlay p { font-size:14px; line-height:1.6; color:#fff; } #overlay p b { color:var(--yellow); font-weight:400; }
+  #overlay .stats { display:grid; grid-template-columns:auto auto; gap:3px 16px; font-size:16px; } #overlay .stats dt { color:#b9c3dd; text-align:right; } #overlay .stats dd { text-align:left; }
+  #overlay .col { display:flex; flex-direction:column; align-items:center; gap:9px; }
+  #overlay button { background:var(--yellow); color:var(--ink); font-size:20px; font-family:inherit; border:3px solid var(--ink); border-radius:999px; padding:9px 32px; box-shadow:0 5px 0 var(--ink); cursor:pointer; }
+  #overlay button.sub { background:#fff; font-size:16px; padding:6px 22px; box-shadow:0 4px 0 var(--ink); } #overlay button small { display:block; font-size:11px; color:var(--muted); }
+  #overlay button:active { transform:translateY(4px); box-shadow:0 1px 0 var(--ink); }
+  @media (max-height:700px) { #col { gap:5px; } .tile.big { height:70px; width:50px; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="col">
+    <div id="hud">
+      <div class="item score"><span class="label">판</span><span class="value" id="roundN">1/9</span></div>
+      <div class="item"><span class="label">나</span><span class="value" id="myScore">0</span></div>
+      <div class="item"><span class="label">컴퓨터</span><span class="value" id="cpuScore">0</span></div>
+      <div class="icons"><button id="muteBtn" title="소리 (M)">🔊</button></div>
+    </div>
+    <div id="wrap">
+      <div class="lbl">컴퓨터의 남은 타일 (색만 보여요)</div>
+      <div class="row" id="cpuRow"></div>
+      <div id="table"><div id="tableRow"><div id="cpuSlot"></div><span id="vs">VS</span><div id="mySlot"></div></div><div id="result"></div></div>
+      <div id="strip"></div>
+      <div id="msg"></div>
+      <div class="row" id="myRow"></div>
+      <div id="tools"><button id="playBtn" disabled>내기</button></div>
+      <div id="overlay"></div>
+    </div>
+  </div>
+</div>
+<script src="logic.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
